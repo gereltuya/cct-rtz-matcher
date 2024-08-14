@@ -2,143 +2,107 @@ import streamlit as st
 import pandas as pd
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
+from datetime import datetime
 
-st.title("Match your lists against the latest Race to Zero member list")
-st.header("Data up-to-date as of August 7, 2024")
+def get_df(csv_url):
+  return pd.read_csv(csv_url).applymap(str)
 
-st.divider()
-st.subheader("1. Downloading the Race to Zero database and processing it...")
+def get_unique_values(list_to_process):
+  return list(dict.fromkeys(list_to_process))
 
-rtz_masterlist_url = "https://github.com/gereltuya/cct-rtz-matcher/raw/main/RtZ%20Participants%20-%20April%202024%20-%20Clean.csv"
-df = pd.read_csv(rtz_masterlist_url)
-df = df.applymap(str)
+def hash_columns(df_to_hash, column_key, column_value):
+  hash_dict = {}
+  for index, row in df_to_hash.iterrows():
+    if row[column_key] not in hash_dict.keys():
+      hash_dict[row[column_key]] = [row[column_value]]
+    else:
+      hash_dict[row[column_key]].append(row[column_value])
+  for key in hash_dict.keys():
+    hash_dict[key] = "; ".join(get_unique_values(hash_dict[key]))
+  return hash_dict
 
-hash_names = {}
-hash_countries = {}
-for index, row in df.iterrows():
-  if row["Name clean"] not in hash_names.keys():
-    hash_names[row["Name clean"]] = [row["Name"]]
-    hash_countries[row["Name clean"]] = [row["Country of HQ"]]
-  else:
-    hash_names[row["Name clean"]].append(row["Name"])
-    hash_countries[row["Name clean"]].append(row["Country of HQ"])
-for key in hash_names.keys():
-  hash_names[key] = "; ".join(list(dict.fromkeys(hash_names[key])))
-for key in hash_countries.keys():
-  hash_countries[key] = "; ".join(list(dict.fromkeys(hash_countries[key])))
+def split_name(name_to_split):
+  return name_to_split.replace(",", " ").lower().split()
 
-st.caption("Done!")
-st.dataframe(df[["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]])
+def hash_abb(df_to_hash, column_key, column_value):
+  hash_dict = {}
+  for index, row in df_to_hash.iterrows():
+    if row[column_key] not in hash_dict.keys():
+      hash_dict[row[column_key]] = split_name(row[column_value])
+    else:
+      for abb in split_name(row[column_value]):
+        hash_dict[row[column_key]].append(abb)
+  for key in hash_dict.keys():
+    hash_dict[key] = get_unique_values(hash_dict[key])
+    return hash_dict
 
-st.divider()
-st.subheader("2. Downloading the entity legal form list and processing it...")
+hash_match_ref_countries = {"Aruba": "Netherlands",
+                            "Bahamas": "The Bahamas",
+                            "Bermuda": "United Kingdom",
+                            "Bolivia (Plurinational State of)": "Bolivia",
+                            "Bonaire, Sint Eustatius and Saba": "Netherlands",
+                            "Brunei Darussalam": "Brunei",
+                            "Cayman Islands": "United Kingdom",
+                            "Cook Islands": "New Zealand",
+                            "Curaçao": "Netherlands",
+                            "Gibraltar": "United Kingdom",
+                            "Guam": "United States of America",
+                            "Guernsey": "United Kingdom",
+                            "Hong Kong": "China",
+                            "Isle of Man": "United Kingdom",
+                            "Jersey": "United Kingdom",
+                            "Korea (Republic of)": "South Korea",
+                            "North Macedonia": "Macedonia",
+                            "Puerto Rico": "United States of America",
+                            "Russian Federation": "Russia",
+                            "Serbia": "Republic of Serbia",
+                            "Sint Maarten": "Netherlands",
+                            "Taiwan (Province of China)": "Taiwan, a province of China",
+                            "Türkiye": "Turkey",
+                            "United Kingdom of Great Britain and Northern Ireland": "United Kingdom",
+                            "Viet Nam": "Vietnam",
+                            "Virgin Islands (British)": "United Kingdom",
+                            "Virgin Islands (U.S.)": "United States of America",
+                            "Czech Republic": "Czechia",
+                            "Taiwan": "Taiwan, a province of China",
+                            "United States": "United States of America"}
 
-elf_let_manual_url = "https://github.com/gereltuya/cct-rtz-matcher/raw/main/ELF%20v1.5%20+%20LET%20+%20Manual.csv"
-df_let = pd.read_csv(elf_let_manual_url)
-df_let = df_let.applymap(str)
+entity_column_rtz = "Name"
+entity_column_clean = "Name clean"
+country_column_rtz = "Country of HQ"
+country_column_clean = "Country ref"
+type_column_rtz = "Type"
 
-hash_let = {}
-for index, row in df_let.iterrows():
-  if row["Country"] not in hash_let.keys():
-    hash_let[row["Country"]] = row["Abbreviation"].replace(",", " ").lower().split()
-  else:
-    for abb in row["Abbreviation"].replace(",", " ").lower().split():
-      hash_let[row["Country"]].append(abb)
-for key in hash_let.keys():
-  hash_let[key] = list(dict.fromkeys(hash_let[key]))
-
-st.caption("Done!")
-
-st.divider()
-st.subheader("3. Upload the list you want to be matched with the RtZ database:")
-
-uploaded_file = st.file_uploader("Upload a CSV file with 'Company Name' and 'Country' columns for now. You can put 'Global' in the 'Country' column if not specified.")
-
-if uploaded_file is not None:
-  df_to_match = pd.read_csv(uploaded_file)
-  st.caption("Done!")
-  st.dataframe(df_to_match)
-
-  st.divider()
-  st.subheader("4. Downloading the reference country list and processing it...")
-
-  ref_countries_url = "https://github.com/gereltuya/cct-rtz-matcher/raw/main/Reference%20list%20-%20Countries.csv"
-  df_ref = pd.read_csv(ref_countries_url)
-  df_ref = df_ref.applymap(str)
-
-  ref_countries = df_ref["Countries in dashboard map"].unique().tolist()
-  match_countries = df_to_match["Country"].unique().tolist()
-  st.write("These countries are not in the reference country list:")
-  for country in match_countries:
-    if country not in ref_countries:
-      st.write(country)
-
-  st.write("These will be mapped according to our predefined mapping list:")
-  hash_match_ref_countries = {"Aruba": "Netherlands",
-                              "Bahamas": "The Bahamas",
-                              "Bermuda": "United Kingdom",
-                              "Bolivia (Plurinational State of)": "Bolivia",
-                              "Bonaire, Sint Eustatius and Saba": "Netherlands",
-                              "Brunei Darussalam": "Brunei",
-                              "Cayman Islands": "United Kingdom",
-                              "Cook Islands": "New Zealand",
-                              "Curaçao": "Netherlands",
-                              "Gibraltar": "United Kingdom",
-                              "Guam": "United States of America",
-                              "Guernsey": "United Kingdom",
-                              "Hong Kong": "China",
-                              "Isle of Man": "United Kingdom",
-                              "Jersey": "United Kingdom",
-                              "Korea (Republic of)": "South Korea",
-                              "North Macedonia": "Macedonia",
-                              "Puerto Rico": "United States of America",
-                              "Russian Federation": "Russia",
-                              "Serbia": "Republic of Serbia",
-                              "Sint Maarten": "Netherlands",
-                              "Taiwan (Province of China)": "Taiwan, a province of China",
-                              "Türkiye": "Turkey",
-                              "United Kingdom of Great Britain and Northern Ireland": "United Kingdom",
-                              "Viet Nam": "Vietnam",
-                              "Virgin Islands (British)": "United Kingdom",
-                              "Virgin Islands (U.S.)": "United States of America",
-                              "Czech Republic": "Czechia",
-                              "Taiwan": "Taiwan, a province of China",
-                              "United States": "United States of America"}
-  st.write(hash_match_ref_countries)
-  st.caption("Done!")
-
-  st.divider()
-  st.subheader("5. Cleaning uploaded list to match...")
-
-  df_to_match['Name clean'] = pd.Series(dtype='object')
-  df_to_match['Country ref'] = pd.Series(dtype='object')
+def clean_df(df_to_clean, entity_column, country_column, hash_to_use):
+  df_to_clean[entity_column_clean] = pd.Series(dtype="object")
+  df_to_clean[country_column_clean] = pd.Series(dtype="object")
   names_clean = []
   countries_ref = []
-  for index, row in df_to_match.iterrows():
-    name_words = row["Company Name"].replace(",", " ").lower().split()
+  for index, row in df_to_clean.iterrows():
+    name_words = split_name(row[entity_column])
     name_words_clean = []
     name_words_clean_v2 = []
     name_clean = ""
-    if row["Country"] in hash_match_ref_countries.keys():
-      country_ref = hash_match_ref_countries[row["Country"]]
+    if row[country_column] in hash_match_ref_countries.keys():
+      country_ref = hash_match_ref_countries[row[country_column]]
     else:
-      country_ref = row["Country"]
+      country_ref = row[country_column]
     countries_ref.append(country_ref)
-    if country_ref not in hash_let.keys():
+    if country_ref not in hash_to_use.keys():
       for name_word in name_words:
-        if name_word not in hash_let["Global"]:
+        if name_word not in hash_to_use["Global"]:
           name_words_clean.append(name_word)
         else:
           pass
       name_clean = " ".join(name_words_clean)
     else:
       for name_word in name_words:
-        if name_word not in hash_let[country_ref]:
+        if name_word not in hash_to_use[country_ref]:
           name_words_clean.append(name_word)
         else:
           pass
       for name_word in name_words_clean:
-        if name_word not in hash_let["Global"]:
+        if name_word not in hash_to_use["Global"]:
           name_words_clean_v2.append(name_word)
         else:
           pass
@@ -147,50 +111,106 @@ if uploaded_file is not None:
       names_clean.append(" ".join(name_words))
     else:
       names_clean.append(name_clean)
-  df_to_match["Name clean"] = names_clean
-  df_to_match["Country ref"] = countries_ref
+  df_to_clean[entity_column_clean] = names_clean
+  df_to_clean[country_column_clean] = countries_ref
+  return df_to_clean
 
-  st.write("Creating hashes of names and countries for later retrieval...")
-  hash_names_to_match = {}
-  hash_countries_to_match = {}
-  for index, row in df_to_match.iterrows():
-    if row["Name clean"] not in hash_names_to_match.keys():
-      hash_names_to_match[row["Name clean"]] = [row["Company Name"]]
-      hash_countries_to_match[row["Name clean"]] = [row["Country ref"]]
-    else:
-      hash_names_to_match[row["Name clean"]].append(row["Company Name"])
-      hash_countries_to_match[row["Name clean"]].append(row["Country ref"])
-  for key in hash_names_to_match.keys():
-    hash_names_to_match[key] = "; ".join(list(dict.fromkeys(hash_names_to_match[key])))
-  for key in hash_countries_to_match.keys():
-    hash_countries_to_match[key] = "; ".join(list(dict.fromkeys(hash_countries_to_match[key])))
-  st.caption("Done!")
+def match_names(name, choices, scorer=fuzz.ratio):
+  best_match = process.extractOne(name, choices, scorer=scorer)
+  return best_match
 
-  st.divider()
-  st.subheader("6. Matching the uploaded list with RtZ database...")
-
-  df['Name clean'] = df['Name clean'].astype(str)
-  df_to_match['Name clean'] = df_to_match['Name clean'].astype(str)
-  def match_names(name, choices, scorer=fuzz.ratio):
-      best_match = process.extractOne(name, choices, scorer=scorer)
-      return best_match
+def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
+  df_rtz[entity_column_clean] = df_rtz[entity_column_clean].astype(str)
+  df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
   matches = []
-  for index, row in df_to_match.iterrows():
-    name = row["Name clean"]
-    match = match_names(name, df[(df["Country of HQ"] == row["Country ref"]) | (df["Country of HQ"] == "")]["Name clean"])
-    matches.append((match[0], hash_names[match[0]], hash_countries[match[0]], match[1]))
-  df_matches1 = pd.DataFrame(matches, columns=['Name clean RtZ', 'Name RtZ', 'Country RtZ', 'Match percentage'])
+  for index, row in df_input.iterrows():
+    name = row[entity_column_clean]
+    column_rtz = df_rtz[(df_rtz[country_column_rtz] == row[country_column_clean]) | (df_rtz[country_column_rtz] == "")][entity_column_clean]
+    match = match_names(name, column_rtz)
+    if match[1] == 100:
+      match_status = "Fully matched"
+    elif match[1] >= 90:
+      match_status = "Likely a match, but manual check needed"
+    else:
+      match_status = "Unlikely a match, but manual check needed"
+    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+  df_matches = pd.DataFrame(matches, columns=["Name clean RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
+  df_input.reset_index(drop=True, inplace=True)
+  df_matches.reset_index(drop=True, inplace=True)
+  df_matches_full = pd.concat([df_input, df_matches], axis=1)
+  return df_matches_full
 
-  df_to_match.reset_index(drop=True, inplace=True)
-  df_matches1.reset_index(drop=True, inplace=True)
-  df_matches1_full = pd.concat([df_to_match, df_matches1], axis=1)
-  df_matches1_full.head(5)
-  st.caption("Done!")
-  st.dataframe(df_matches1_full)
-  st.balloons()
+st.sidebar.write("Please note that this matching tool is designed to reduce the amount of manual work involved in identifying who is in the Race to Zero. However, it is not intended to completely eliminate manual work. We encourage you to provide feedback to help improve its results.")
+st.sidebar.link_button("Send feedback", "https://forms.gle/c8HZtr9LGkN5U6nX9", type="primary")
 
-  st.download_button(
-    label="Download the result as CSV",
-    data=df_matches1_full.to_csv().encode("utf-8"),
-    file_name="Race to Zero matches.csv",
-    mime="text/csv",)
+st.title("Match your entity list against the latest Race to Zero member list")
+st.header("Data is up-to-date as of August 14, 2024, and the matching method is version 4.")
+
+st.divider()
+st.subheader("1. Downloading the Race to Zero database and processing it...")
+df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20April%202024%20-%20Clean.csv")
+hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
+hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
+hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
+st.caption("Done!")
+public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
+st.dataframe(df[public_columns])
+
+st.divider()
+st.subheader("2. Downloading the entity legal form list and processing it...")
+df_elf = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/ELF%20v1.5%20+%20LET%20+%20Manual.csv")
+hash_elf = hash_abb(df_elf, "Country", "Abbreviation")
+hash_elf_without_countries = hash_abb(df_elf, "Country Global", "Abbreviation")
+st.caption("Done!")
+
+st.divider()
+st.subheader("3. Upload the list you want to match against the Race to Zero database:")
+uploaded_file = st.file_uploader("Upload your data in CSV format.")
+if uploaded_file is not None:
+  df_to_match = pd.read_csv(uploaded_file)
+  st.dataframe(df_to_match)
+  country_status = st.radio("Does your data include the countries for which the legal entities are registered?", ["Yes", "No"])
+  if country_status == "Yes":
+    country_column_name = st.text_input("What is the column name for **countries** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Country")
+    entity_column_name = st.text_input("What is the column name for **entities** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Name")
+    
+    st.divider()
+    st.subheader("4. Downloading the reference country list and processing it...")
+    df_ref = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/Reference%20list%20-%20Countries.csv")
+    ref_countries = df_ref["Countries in dashboard map"].unique().tolist()
+    match_countries = df_to_match[country_column_name].unique().tolist()
+    countries_to_map = [country for country in match_countries if country not in ref_countries]
+    if len(countries_to_map) > 0:
+      st.write("a) These countries in your data are not in the reference country list:")
+      for country in countries_to_map:
+        st.write(country)
+      st.write("b) These will be mapped according to our predefined mapping list.")
+      # st.write(hash_match_ref_countries)
+    else:
+      st.write("a) All countries in your data are in the reference country list.")
+    st.caption("Done!")
+
+    st.divider()
+    st.subheader("5. Cleaning uploaded list to match...")
+    df_to_match = clean_df(df_to_match, entity_column_name, country_column_name, hash_elf)
+    hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
+    hash_countries_to_match = hash_columns(df_to_match, entity_column_clean, country_column_clean)
+    st.caption("Done!")
+
+    st.divider()
+    st.subheader("6. Matching the uploaded data with the Race to Zero database...")
+    df_matches1_full = match_dfs(df, df_to_match, hash_names, hash_countries, hash_types)
+    st.caption("Done!")
+    st.balloons()
+
+    st.divider()
+    st.subheader("7. Match results")
+    len_to_match = df_to_match.shape[0]
+    st.write(df_matches1_full.groupby(["Match status"]).size().reset_index(name="Count (out of {})".format(len_to_match)))
+    df_matches1_filtered = df_matches1_full.drop(columns = ["Name clean", "Country ref", "Name clean RtZ"])
+    st.dataframe(df_matches1_filtered)
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    st.download_button(label="Download the full results in CSV format", data=df_matches1_full.to_csv().encode("utf-8"), file_name="Race to Zero matches full {}.csv".format(current_datetime), mime="text/csv")
+
+  elif country_status == "No":
+    st.caption("Work in progress...please check again later")
