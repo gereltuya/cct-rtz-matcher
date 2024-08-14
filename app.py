@@ -115,6 +115,31 @@ def clean_df(df_to_clean, entity_column, country_column, hash_to_use):
   df_to_clean[country_column_clean] = countries_ref
   return df_to_clean
 
+def clean_df_without_countries(df_to_clean, entity_column, hash_to_use):
+  df_to_clean[entity_column_clean] = pd.Series(dtype="object")
+  df_to_clean[country_column_clean] = pd.Series(dtype="object")
+  names_clean = []
+  countries_ref = []
+  for index, row in df_to_clean.iterrows():
+    name_words = split_name(row[entity_column])
+    name_words_clean = []
+    name_clean = ""
+    country_ref = "Global"
+    countries_ref.append(country_ref)
+    for name_word in name_words:
+      if name_word not in hash_to_use[country_ref]:
+        name_words_clean.append(name_word)
+      else:
+        pass
+    name_clean = " ".join(name_words_clean)
+    if name_clean == "":
+      names_clean.append(" ".join(name_words))
+    else:
+      names_clean.append(name_clean)
+  df_to_clean[entity_column_clean] = names_clean
+  df_to_clean[country_column_clean] = countries_ref
+  return df_to_clean
+
 def match_names(name, choices, scorer=fuzz.ratio):
   best_match = process.extractOne(name, choices, scorer=scorer)
   return best_match
@@ -140,7 +165,30 @@ def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_r
   df_matches_full = pd.concat([df_input, df_matches], axis=1)
   return df_matches_full
 
-st.sidebar.write("Please note that this matching tool is designed to reduce the amount of manual work involved in identifying who is in the Race to Zero. However, it is not intended to completely eliminate manual work. We encourage you to provide feedback to help improve its results.")
+def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
+  df_rtz[entity_column_clean] = df_rtz[entity_column_clean].astype(str)
+  df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
+  matches = []
+  for index, row in df_input.iterrows():
+    name = row[entity_column_clean]
+    column_rtz = df_rtz[entity_column_clean]
+    match = match_names(name, column_rtz)
+    if match[1] == 100:
+      match_status = "Fully matched"
+    elif match[1] >= 90:
+      match_status = "Likely a match, but manual check needed"
+    else:
+      match_status = "Unlikely a match, but manual check needed"
+    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+  df_matches = pd.DataFrame(matches, columns=["Name clean RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
+  df_input.reset_index(drop=True, inplace=True)
+  df_matches.reset_index(drop=True, inplace=True)
+  df_matches_full = pd.concat([df_input, df_matches], axis=1)
+  return df_matches_full
+
+st.sidebar.write("Please note that this matching tool is designed to reduce the amount of manual work involved in identifying who is in the Race to Zero.")
+st.sidebar.write("However, it is not intended to completely eliminate manual work.")
+st.sidebar.write("We encourage you to provide feedback to help improve its results.")
 st.sidebar.link_button("Send feedback", "https://forms.gle/c8HZtr9LGkN5U6nX9", type="primary")
 
 st.title("Match your entity list against the latest Race to Zero member list")
@@ -213,4 +261,26 @@ if uploaded_file is not None:
     st.download_button(label="Download the full results in CSV format", data=df_matches1_full.to_csv().encode("utf-8"), file_name="Race to Zero matches full {}.csv".format(current_datetime), mime="text/csv")
 
   elif country_status == "No":
-    st.caption("Work in progress...please check again later")
+    entity_column_name = st.text_input("What is the column name for **entities** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Name")
+    
+    st.divider()
+    st.subheader("6. Cleaning uploaded list to match...")
+    df_to_match = clean_df_without_countries(df_to_match, entity_column_name, hash_elf_without_countries)
+    hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
+    hash_countries_to_match = hash_columns(df_to_match, entity_column_clean, country_column_clean)
+    st.caption("Done!")
+
+    st.divider()
+    st.subheader("6. Matching the uploaded data with the Race to Zero database...")
+    df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names, hash_countries, hash_types)
+    st.caption("Done!")
+    st.balloons()
+
+    st.divider()
+    st.subheader("7. Match results")
+    len_to_match = df_to_match.shape[0]
+    st.write(df_matches2_full.groupby(["Match status"]).size().reset_index(name="Count (out of {})".format(len_to_match)))
+    df_matches2_filtered = df_matches2_full.drop(columns = ["Name clean", "Name clean RtZ"])
+    st.dataframe(df_matches2_filtered)
+    current_datetime = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+    st.download_button(label="Download the full results in CSV format", data=df_matches2_full.to_csv().encode("utf-8"), file_name="Race to Zero matches full {}.csv".format(current_datetime), mime="text/csv")
