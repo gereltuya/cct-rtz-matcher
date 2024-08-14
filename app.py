@@ -3,6 +3,26 @@ import pandas as pd
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from datetime import datetime
+import hmac
+
+def check_password():
+    def password_entered():
+        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]
+        else:
+            st.session_state["password_correct"] = False
+    if st.session_state.get("password_correct", False):
+        return True
+    st.text_input(
+        "Password", type="password", on_change=password_entered, key="password"
+    )
+    if "password_correct" in st.session_state:
+        st.error("😕 Password incorrect")
+    return False
+
+if not check_password():
+    st.stop()
 
 def get_df(csv_url):
   return pd.read_csv(csv_url).applymap(str)
@@ -264,20 +284,20 @@ if uploaded_file is not None:
     entity_column_name = st.text_input("What is the column name for **entities** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Name")
     
     st.divider()
-    st.subheader("4. Cleaning uploaded list to match...")
+    st.subheader("6. Cleaning uploaded list to match...")
     df_to_match = clean_df_without_countries(df_to_match, entity_column_name, hash_elf_without_countries)
     hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
     hash_countries_to_match = hash_columns(df_to_match, entity_column_clean, country_column_clean)
     st.caption("Done!")
 
     st.divider()
-    st.subheader("5. Matching the uploaded data with the Race to Zero database...")
+    st.subheader("6. Matching the uploaded data with the Race to Zero database...")
     df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names, hash_countries, hash_types)
     st.caption("Done!")
     st.balloons()
 
     st.divider()
-    st.subheader("6. Match results")
+    st.subheader("7. Match results")
     len_to_match = df_to_match.shape[0]
     st.write(df_matches2_full.groupby(["Match status"]).size().reset_index(name="Count (out of {})".format(len_to_match)))
     df_matches2_filtered = df_matches2_full.drop(columns = ["Name clean", "Name clean RtZ"])
