@@ -263,6 +263,7 @@ if uploaded_file is not None:
     df_to_match = clean_df(df_to_match, entity_column_name, country_column_name, hash_elf)
     hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
     hash_countries_to_match = hash_columns(df_to_match, entity_column_clean, country_column_clean)
+    st.dataframe(df_to_match)
     st.caption("Done!")
 
     st.divider()
@@ -288,6 +289,7 @@ if uploaded_file is not None:
     df_to_match = clean_df_without_countries(df_to_match, entity_column_name, hash_elf_without_countries)
     hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
     hash_countries_to_match = hash_columns(df_to_match, entity_column_clean, country_column_clean)
+    st.dataframe(df_to_match)
     st.caption("Done!")
 
     st.divider()
