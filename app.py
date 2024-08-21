@@ -200,7 +200,7 @@ def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_r
   return df_matches_full
 
 # Match entity names without country values against RtZ entity list
-def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
+def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz_global, hash_countries_rtz, hash_types_rtz):
   df_rtz[entity_column_clean_global] = df_rtz[entity_column_clean_global].astype(str)
   df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
   matches = []
@@ -214,7 +214,7 @@ def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries
       match_status = "Likely a match, but manual check needed"
     else:
       match_status = "Unlikely a match, but manual check needed"
-    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+    matches.append((match[0], hash_names_rtz_global[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
   df_matches = pd.DataFrame(matches, columns=["Name clean Global RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
   df_input.reset_index(drop=True, inplace=True)
   df_matches.reset_index(drop=True, inplace=True)
