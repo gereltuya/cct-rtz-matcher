@@ -319,7 +319,7 @@ if uploaded_file is not None:
     st.subheader("6. Match results")
     len_to_match = df_to_match.shape[0]
     st.write(df_matches2_full.groupby(["Match status"]).size().reset_index(name="Count (out of {})".format(len_to_match)))
-    df_matches2_filtered = df_matches2_full.drop(columns = ["Name clean", "Name clean RtZ"])
+    df_matches2_filtered = df_matches2_full.drop(columns = ["Name clean", "Name clean Global RtZ"])
     st.dataframe(df_matches2_filtered)
     current_datetime = datetime.now().strftime("%Y-%m-%d %H-%M-%S")
     st.download_button(label="Download the full results in CSV format", data=df_matches2_full.to_csv().encode("utf-8"), file_name="Race to Zero matches full {}.csv".format(current_datetime), mime="text/csv")
