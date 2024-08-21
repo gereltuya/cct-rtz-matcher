@@ -98,7 +98,6 @@ hash_match_ref_countries = {"Aruba": "Netherlands",
 # Set global variables for column names
 entity_column_rtz = "Name"
 entity_column_clean = "Name clean"
-entity_column_clean_global = "Name clean Global"
 country_column_rtz = "Country of HQ"
 country_column_clean = "Country ref"
 type_column_rtz = "Type"
@@ -200,13 +199,13 @@ def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_r
   return df_matches_full
 
 # Match entity names without country values against RtZ entity list
-def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz_global, hash_countries_rtz, hash_types_rtz):
-  df_rtz[entity_column_clean_global] = df_rtz[entity_column_clean_global].astype(str)
+def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
+  df_rtz[entity_column_clean] = df_rtz[entity_column_clean].astype(str)
   df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
   matches = []
   for index, row in df_input.iterrows():
     name = row[entity_column_clean]
-    column_rtz = df_rtz[entity_column_clean_global]
+    column_rtz = df_rtz[entity_column_clean]
     match = match_names(name, column_rtz)
     if match[1] == 100:
       match_status = "Fully matched"
@@ -214,7 +213,7 @@ def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz_global, hash_co
       match_status = "Likely a match, but manual check needed"
     else:
       match_status = "Unlikely a match, but manual check needed"
-    matches.append((match[0], hash_names_rtz_global[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
   df_matches = pd.DataFrame(matches, columns=["Name clean Global RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
   df_input.reset_index(drop=True, inplace=True)
   df_matches.reset_index(drop=True, inplace=True)
@@ -231,25 +230,7 @@ st.title("Match your entity list against the latest Race to Zero member list")
 st.header("Data is up-to-date as of August 14, 2024, and the matching method is version 4.")
 
 st.divider()
-st.subheader("1. Downloading the Race to Zero database and processing it...")
-df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20April%202024%20-%20Clean%20v2.csv")
-hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
-hash_names_global = hash_columns(df, entity_column_clean_global, entity_column_rtz)
-hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
-hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
-st.caption("Done!")
-public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
-st.dataframe(df[public_columns])
-
-st.divider()
-st.subheader("2. Downloading the entity legal form list and processing it...")
-df_elf = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/ELF%20v1.5%20+%20LET%20+%20Manual%20v2.csv")
-hash_elf = hash_abb(df_elf, "Country", "Abbreviation")
-hash_elf_without_countries = hash_abb(df_elf, "Country Global", "Abbreviation")
-st.caption("Done!")
-
-st.divider()
-st.subheader("3. Upload the list you want to match against the Race to Zero database:")
+st.subheader("1. Upload the list you want to match against the Race to Zero database:")
 uploaded_file = st.file_uploader("Upload your data in CSV format.")
 if uploaded_file is not None:
   df_to_match = pd.read_csv(uploaded_file)
@@ -259,6 +240,23 @@ if uploaded_file is not None:
     country_column_name = st.text_input("What is the column name for **countries** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Country")
     entity_column_name = st.text_input("What is the column name for **entities** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Name")
 
+    st.divider()
+    st.subheader("2. Downloading the Race to Zero database and processing it...")
+    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20April%202024%20-%20Clean%20v2.csv")
+    hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
+    hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
+    hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
+    st.caption("Done!")
+    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
+    st.dataframe(df[public_columns])
+
+    st.divider()
+    st.subheader("3. Downloading the entity legal form list and processing it...")
+    df_elf = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/ELF%20v1.5%20+%20LET%20+%20Manual%20v2.csv")
+    hash_elf = hash_abb(df_elf, "Country", "Abbreviation")
+    hash_elf_without_countries = hash_abb(df_elf, "Country Global", "Abbreviation")
+    st.caption("Done!")
+    
     st.divider()
     st.subheader("4. Downloading the reference country list and processing it...")
     df_ref = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/Reference%20list%20-%20Countries.csv")
@@ -302,6 +300,23 @@ if uploaded_file is not None:
     entity_column_name = st.text_input("What is the column name for **entities** in your data? Please type it exactly as it is and press **Enter**, otherwise the next steps might result in errors.", "Name")
 
     st.divider()
+    st.subheader("2. Downloading the Race to Zero database and processing it...")
+    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20April%202024%20-%20Clean%20v2%20-%20Global.csv")
+    hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
+    hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
+    hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
+    st.caption("Done!")
+    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
+    st.dataframe(df[public_columns])
+
+    st.divider()
+    st.subheader("3. Downloading the entity legal form list and processing it...")
+    df_elf = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/ELF%20v1.5%20+%20LET%20+%20Manual%20v2.csv")
+    hash_elf = hash_abb(df_elf, "Country", "Abbreviation")
+    hash_elf_without_countries = hash_abb(df_elf, "Country Global", "Abbreviation")
+    st.caption("Done!")
+
+    st.divider()
     st.subheader("4. Cleaning uploaded list to match...")
     df_to_match = clean_df_without_countries(df_to_match, entity_column_name, hash_elf_without_countries)
     hash_names_to_match = hash_columns(df_to_match, entity_column_clean, entity_column_name)
@@ -311,7 +326,7 @@ if uploaded_file is not None:
 
     st.divider()
     st.subheader("5. Matching the uploaded data with the Race to Zero database...")
-    df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names_global, hash_countries, hash_types)
+    df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names, hash_countries, hash_types)
     st.caption("Done!")
     st.balloons()
 
