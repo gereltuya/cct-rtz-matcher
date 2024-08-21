@@ -5,6 +5,7 @@ from fuzzywuzzy import process
 from datetime import datetime
 import hmac
 
+# Protect with password
 def check_password():
     def password_entered():
         if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
@@ -21,15 +22,19 @@ def check_password():
         st.error("😕 Password incorrect")
     return False
 
+# Check for password
 if not check_password():
     st.stop()
 
+# Download CSV file from URL
 def get_df(csv_url):
   return pd.read_csv(csv_url).applymap(str)
 
+# Get unique values from a list
 def get_unique_values(list_to_process):
   return list(dict.fromkeys(list_to_process))
 
+# Create a hash map from dataframe columns
 def hash_columns(df_to_hash, column_key, column_value):
   hash_dict = {}
   for index, row in df_to_hash.iterrows():
@@ -41,9 +46,11 @@ def hash_columns(df_to_hash, column_key, column_value):
     hash_dict[key] = "; ".join(get_unique_values(hash_dict[key]))
   return hash_dict
 
+# Normalize names in a very basic way as not to lose any valuable information
 def split_name(name_to_split):
   return name_to_split.replace(",", " ").replace("(", " ").replace(")", " ").lower().split()
 
+# Create a hash map from dataframe columns with nested values
 def hash_abb(df_to_hash, column_key, column_value):
   hash_dict = {}
   for index, row in df_to_hash.iterrows():
@@ -56,6 +63,7 @@ def hash_abb(df_to_hash, column_key, column_value):
     hash_dict[key] = get_unique_values(hash_dict[key])
     return hash_dict
 
+# Create a hash map of countries
 hash_match_ref_countries = {"Aruba": "Netherlands",
                             "Bahamas": "The Bahamas",
                             "Bermuda": "United Kingdom",
@@ -87,12 +95,15 @@ hash_match_ref_countries = {"Aruba": "Netherlands",
                             "Taiwan": "Taiwan, a province of China",
                             "United States": "United States of America"}
 
+# Set global variables for column names
 entity_column_rtz = "Name"
 entity_column_clean = "Name clean"
+entity_column_clean_global = "Name clean Global"
 country_column_rtz = "Country of HQ"
 country_column_clean = "Country ref"
 type_column_rtz = "Type"
 
+# Clean entity names with country values present
 def clean_df(df_to_clean, entity_column, country_column, hash_to_use):
   df_to_clean[entity_column_clean] = pd.Series(dtype="object")
   df_to_clean[country_column_clean] = pd.Series(dtype="object")
@@ -135,6 +146,7 @@ def clean_df(df_to_clean, entity_column, country_column, hash_to_use):
   df_to_clean[country_column_clean] = countries_ref
   return df_to_clean
 
+# Clean entity names without country values
 def clean_df_without_countries(df_to_clean, entity_column, hash_to_use):
   df_to_clean[entity_column_clean] = pd.Series(dtype="object")
   df_to_clean[country_column_clean] = pd.Series(dtype="object")
@@ -160,10 +172,12 @@ def clean_df_without_countries(df_to_clean, entity_column, hash_to_use):
   df_to_clean[country_column_clean] = countries_ref
   return df_to_clean
 
+# Match names using fuzzywuzzy with Levenstein distance
 def match_names(name, choices, scorer=fuzz.ratio):
   best_match = process.extractOne(name, choices, scorer=scorer)
   return best_match
 
+# Match entity names with country values present against RtZ entity list
 def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
   df_rtz[entity_column_clean] = df_rtz[entity_column_clean].astype(str)
   df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
@@ -185,13 +199,14 @@ def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_r
   df_matches_full = pd.concat([df_input, df_matches], axis=1)
   return df_matches_full
 
+# Match entity names without country values against RtZ entity list
 def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_rtz):
-  df_rtz[entity_column_clean] = df_rtz[entity_column_clean].astype(str)
+  df_rtz[entity_column_clean_global] = df_rtz[entity_column_clean_global].astype(str)
   df_input[entity_column_clean] = df_input[entity_column_clean].astype(str)
   matches = []
   for index, row in df_input.iterrows():
     name = row[entity_column_clean]
-    column_rtz = df_rtz[entity_column_clean]
+    column_rtz = df_rtz[entity_column_clean_global]
     match = match_names(name, column_rtz)
     if match[1] == 100:
       match_status = "Fully matched"
@@ -200,12 +215,13 @@ def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries
     else:
       match_status = "Unlikely a match, but manual check needed"
     matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
-  df_matches = pd.DataFrame(matches, columns=["Name clean RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
+  df_matches = pd.DataFrame(matches, columns=["Name clean Global RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
   df_input.reset_index(drop=True, inplace=True)
   df_matches.reset_index(drop=True, inplace=True)
   df_matches_full = pd.concat([df_input, df_matches], axis=1)
   return df_matches_full
 
+# Start streamlit interface - from here on, comments are not that needed as interface sections are clearly explained
 st.sidebar.write("Please note that this matching tool is designed to reduce the amount of manual work involved in identifying who is in the Race to Zero.")
 st.sidebar.write("However, it is not intended to completely eliminate manual work.")
 st.sidebar.write("We encourage you to provide feedback to help improve its results.")
@@ -218,6 +234,7 @@ st.divider()
 st.subheader("1. Downloading the Race to Zero database and processing it...")
 df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20April%202024%20-%20Clean%20v2.csv")
 hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
+hash_names_global = hash_columns(df, entity_column_clean_global, entity_column_rtz)
 hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
 hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
 st.caption("Done!")
@@ -294,7 +311,7 @@ if uploaded_file is not None:
 
     st.divider()
     st.subheader("5. Matching the uploaded data with the Race to Zero database...")
-    df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names, hash_countries, hash_types)
+    df_matches2_full = match_dfs_without_countries(df, df_to_match, hash_names_global, hash_countries, hash_types)
     st.caption("Done!")
     st.balloons()
 
