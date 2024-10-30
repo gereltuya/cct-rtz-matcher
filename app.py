@@ -247,7 +247,7 @@ if uploaded_file is not None:
     hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
     hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
     st.caption("Done!")
-    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
+    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector (if applicable)", "Join Date (DD/MM/YYYY)"]
     st.dataframe(df[public_columns])
 
     st.divider()
@@ -306,7 +306,7 @@ if uploaded_file is not None:
     hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
     hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
     st.caption("Done!")
-    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector \n(if applicable)", "Join Date (DD/MM/YYYY)"]
+    public_columns = ["Name", "Type", "Country of HQ", "UN Region", "Sector (if applicable)", "Join Date (DD/MM/YYYY)"]
     st.dataframe(df[public_columns])
 
     st.divider()
