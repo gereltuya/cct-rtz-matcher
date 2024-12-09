@@ -3,28 +3,6 @@ import pandas as pd
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
 from datetime import datetime
-import hmac
-
-# Protect with password
-def check_password():
-    def password_entered():
-        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-    if st.session_state.get("password_correct", False):
-        return True
-    st.text_input(
-        "Password", type="password", on_change=password_entered, key="password"
-    )
-    if "password_correct" in st.session_state:
-        st.error("😕 Password incorrect")
-    return False
-
-# Check for password
-# if not check_password():
-#     st.stop()
 
 # Download CSV file from URL
 def get_df(csv_url):
@@ -93,7 +71,8 @@ hash_match_ref_countries = {"Aruba": "Netherlands",
                             "Virgin Islands (U.S.)": "United States of America",
                             "Czech Republic": "Czechia",
                             "Taiwan": "Taiwan, a province of China",
-                            "United States": "United States of America"}
+                            "United States": "United States of America",
+                            "Eswatini": "eSwatini"}
 
 # Set global variables for column names
 entity_column_rtz = "Name"
@@ -234,6 +213,7 @@ st.subheader("1. Upload the list you want to match against the Race to Zero data
 uploaded_file = st.file_uploader("Upload your data in CSV format.")
 if uploaded_file is not None:
   df_to_match = pd.read_csv(uploaded_file)
+  df_to_match = df_to_match.astype(str)
   st.dataframe(df_to_match)
   country_status = st.radio("Does your data include the countries for which the legal entities are registered?", ["Yes", "No"])
   if country_status == "Yes":
