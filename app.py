@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from fuzzywuzzy import fuzz
 from fuzzywuzzy import process
+from unidecode import unidecode
 from datetime import datetime
 
 # Download CSV file from URL
@@ -26,7 +27,7 @@ def hash_columns(df_to_hash, column_key, column_value):
 
 # Normalize names in a very basic way as not to lose any valuable information
 def split_name(name_to_split):
-  return name_to_split.replace(",", " ").replace("(", " ").replace(")", " ").lower().split()
+  return unidecode(name_to_split).replace(",", " ").replace("(", " ").replace(")", " ").lower().split()
 
 # Create a hash map from dataframe columns with nested values
 def hash_abb(df_to_hash, column_key, column_value):
