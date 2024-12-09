@@ -23,8 +23,8 @@ def check_password():
     return False
 
 # Check for password
-if not check_password():
-    st.stop()
+# if not check_password():
+#     st.stop()
 
 # Download CSV file from URL
 def get_df(csv_url):
