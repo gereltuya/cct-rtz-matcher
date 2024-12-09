@@ -71,8 +71,7 @@ hash_match_ref_countries = {"Aruba": "Netherlands",
                             "Virgin Islands (U.S.)": "United States of America",
                             "Czech Republic": "Czechia",
                             "Taiwan": "Taiwan, a province of China",
-                            "United States": "United States of America",
-                            "Eswatini": "eSwatini"}
+                            "United States": "United States of America"}
 
 # Set global variables for column names
 entity_column_rtz = "Name"
@@ -213,7 +212,7 @@ st.subheader("1. Upload the list you want to match against the Race to Zero data
 uploaded_file = st.file_uploader("Upload your data in CSV format.")
 if uploaded_file is not None:
   df_to_match = pd.read_csv(uploaded_file)
-  df_to_match = df_to_match.astype(str)
+  df_to_match = df_to_match.fillna("")
   st.dataframe(df_to_match)
   country_status = st.radio("Does your data include the countries for which the legal entities are registered?", ["Yes", "No"])
   if country_status == "Yes":
