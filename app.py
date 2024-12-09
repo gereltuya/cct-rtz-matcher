@@ -163,13 +163,16 @@ def match_dfs(df_rtz, df_input, hash_names_rtz, hash_countries_rtz, hash_types_r
     name = row[entity_column_clean]
     column_rtz = df_rtz[(df_rtz[country_column_rtz] == row[country_column_clean]) | (df_rtz[country_column_rtz] == "")][entity_column_clean]
     match = match_names(name, column_rtz)
-    if match[1] == 100:
-      match_status = "Fully matched"
-    elif match[1] >= 90:
-      match_status = "Likely a match, but manual check needed"
+    if match is None:
+      pass
     else:
-      match_status = "Unlikely a match, but manual check needed"
-    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+      if match[1] == 100:
+        match_status = "Fully matched"
+      elif match[1] >= 90:
+        match_status = "Likely a match, but manual check needed"
+      else:
+        match_status = "Unlikely a match, but manual check needed"
+      matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
   df_matches = pd.DataFrame(matches, columns=["Name clean RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
   df_input.reset_index(drop=True, inplace=True)
   df_matches.reset_index(drop=True, inplace=True)
@@ -185,13 +188,16 @@ def match_dfs_without_countries(df_rtz, df_input, hash_names_rtz, hash_countries
     name = row[entity_column_clean]
     column_rtz = df_rtz[entity_column_clean]
     match = match_names(name, column_rtz)
-    if match[1] == 100:
-      match_status = "Fully matched"
-    elif match[1] >= 90:
-      match_status = "Likely a match, but manual check needed"
+    if match is None:
+      pass
     else:
-      match_status = "Unlikely a match, but manual check needed"
-    matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
+      if match[1] == 100:
+        match_status = "Fully matched"
+      elif match[1] >= 90:
+        match_status = "Likely a match, but manual check needed"
+      else:
+        match_status = "Unlikely a match, but manual check needed"
+      matches.append((match[0], hash_names_rtz[match[0]], hash_countries_rtz[match[0]], hash_types_rtz[match[0]], match[1], match_status))
   df_matches = pd.DataFrame(matches, columns=["Name clean Global RtZ", "Name RtZ", "Country RtZ", "Type RtZ", "Match percentage", "Match status"])
   df_input.reset_index(drop=True, inplace=True)
   df_matches.reset_index(drop=True, inplace=True)
