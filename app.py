@@ -72,7 +72,8 @@ hash_match_ref_countries = {"Aruba": "Netherlands",
                             "Virgin Islands (U.S.)": "United States of America",
                             "Czech Republic": "Czechia",
                             "Taiwan": "Taiwan, a province of China",
-                            "United States": "United States of America"}
+                            "United States": "United States of America",
+                            "Eswatini": "eSwatini"}
 
 # Set global variables for column names
 entity_column_rtz = "Name"
@@ -212,7 +213,7 @@ st.sidebar.write("We encourage you to provide feedback to help improve its resul
 st.sidebar.link_button("Send feedback", "https://forms.gle/c8HZtr9LGkN5U6nX9", type="primary")
 
 st.title("Match your entity list against the latest Race to Zero member list")
-st.header("Data is up-to-date as of October 30, 2024, and the matching method is version 4.")
+st.header("Data is up-to-date as of December 9, 2024, and the matching method is version 5.")
 
 st.divider()
 st.subheader("1. Upload the list you want to match against the Race to Zero database:")
@@ -228,7 +229,7 @@ if uploaded_file is not None:
 
     st.divider()
     st.subheader("2. Downloading the Race to Zero database and processing it...")
-    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20Sep%202024%20-%20Clean%20v2.csv")
+    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20Sep%202024%20-%20Clean%20v3.csv")
     hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
     hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
     hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
@@ -287,7 +288,7 @@ if uploaded_file is not None:
 
     st.divider()
     st.subheader("2. Downloading the Race to Zero database and processing it...")
-    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20Sep%202024%20-%20Clean%20v2%20-%20Global.csv")
+    df = get_df("https://github.com/gereltuya/cct-rtz-matcher/raw/main/data/RtZ%20Participants%20-%20Sep%202024%20-%20Clean%20v3%20-%20Global.csv")
     hash_names = hash_columns(df, entity_column_clean, entity_column_rtz)
     hash_countries = hash_columns(df, entity_column_clean, country_column_rtz)
     hash_types = hash_columns(df, entity_column_clean, type_column_rtz)
